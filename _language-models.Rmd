@@ -1,0 +1,754 @@
+---
+title: "Language Models and the $N$-gram Model"
+subtitle: _(Part 1 of Modelling Textual Data Series)_
+author: 
+  - Rey R. Cuenca^[Department of Mathematics and Statistics, MSU-Iligan Institute of Technology]
+date: "May 2022"
+abstract: |
+  This paper gives a quick introduction to the language models and the $n$-gram model.
+output:
+  bookdown::pdf_document2:
+    template: pandoc/rvc-template.tex
+    extra_dependencies: ["float"]
+geometry:
+  - margin=1.25in
+fontsize: 12pt
+header-includes:
+  - \usepackage{tgpagella}
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup{width=0.85\linewidth, font=footnotesize, labelfont=bf}
+  - \newcommand{\w}{\mathbf{w}}
+  - \newcommand{\dd}{\text{d}}
+  - \newcommand{\tc}[1]{\texttt{#1}}
+  - \newcommand{\ds}{\displaystyle}
+toc: false
+indent: false
+classoption:
+  a4paper
+bibliography: references.bib
+csl: apa-5th-edition.csl
+link-citations: yes
+linkcolor: blue
+citecolor: blue
+urlcolor: blue
+---
+```{r echo=FALSE}
+knitr::opts_chunk$set(comment = "#>")
+```
+
+# Motivation: Modelling Language Intuition
+
+Any person with the some basic fluency of the English language would find that sentence (A) "sounds more grammatical" than sentence (B).
+
+ > (A) _The food is already served to the customers._
+ >
+ > (B) _The food served is already to the customers._
+
+How do they do this? It would be great to mathematized this kind of "grammatical intuition". Doing so would help us build machines (computers) to automate the process of checking the grammaticality of any given sentence and lessen both burden and inaccuracies when doing it manually specially in situations where they are provided in volumes.
+
+In this paper, we introduce the concept of _language models_ (LMs) and present one, belonging to this family, called the _$n$-gram_ model.
+
+
+# Notations and Representations
+
+Recall that our goal is to provide a mathematical representation, a _mathematical model_ to be exact, of the "grammatical intuition" discussed in the previous section. Since we are to translate such abstract idea to mathematical terms, we need to introduce some mathematical notations. First is the representation of sentences.
+
+<!-- \begin{tabbing} -->
+<!-- \hspace{1.2in}\=\hspace{2in}\=\kill -->
+<!--  \>\textbf{Notation}             \>\textbf{Representation of}    \\  -->
+<!--  \>$w_i$                         \>tokens\quad (e.g. words, phrases,...)    \\  -->
+<!--  \>$\w=(w_1,w_2,\ldots,w_n)$     \>sentences    \\ -->
+<!-- \end{tabbing} -->
+
+| **Notation** | **Description** |
+|:------------:|:---------------|
+| $w_i$                       | tokens\quad (e.g. words, phrases,...)    |
+| $\w=(w_1,w_2,\ldots,w_n)$   | sentences    |
+
+
+::: {.example}
+Consider the following sentence:
+
+> `The dog is barking.`
+
+We could write this as a vector 
+
+$$\w = (\texttt{The},\texttt{dog}, \texttt{is}, \texttt{barking})$$
+
+where 
+
+|  $i$ | $w_i$       |
+|:----:|:------------|
+| 1    | `The`       |
+| 2    | `dog`       |
+| 3    | `is`        |
+| 4    | `barking`   |
+
+Notice, we did not include the period "`.`" symbol. However, depending on the usage case, we may include this as part one of the tokens in sentences or represent it with another notation like in the following example.
+:::
+
+
+:::{.example}
+In some cases, it is useful to introduce some auxiliary notations representing the starting and ending of a given sentence like the following.
+
+> `<s> The dog is barking </s>`
+
+Writing this in a vector form, we have
+
+$$\w = (\texttt{<s>}, \texttt{The},\texttt{dog}, \texttt{is}, \texttt{barking}, \texttt{</s>})$$
+
+where 
+
+|  $i$ | $w_i$       |
+|:----:|:------------|
+| 1    | `<s>`       |
+| 2    | `The`       |
+| 3    | `dog`       |
+| 4    | `is`        |
+| 5    | `barking`   |
+| 6    | `</s>`      |
+
+:::
+
+
+# The Langauge Model
+
+The "grammatical intuition" can essentially be viewed in two ways:
+
+ 1. _Given a sentence, identify whether it's grammatical or not._
+ 2. _Given two sentences, identify which is more grammatically sound._
+
+The mathematical formulation for the first one is equivalent to finding a function $f$ such that given a sentence $\w$,
+
+\begin{equation}
+f(\w) = \begin{cases}\ 1 & \text{\(\w\) is grammatical} \\[5pt] \ 0 & \text{otherwise}\end{cases}
+(\#eq:classifier)
+\end{equation}
+
+Function $f$ here is an example of what we call a _classifier_. The term comes from the goal of identifying whether an input sentence is grammatical or not using $f$. Knowing how to construct $f$ is discussed in the second part of this tutorial.
+
+The second one can be regarded as finding a function $P(\cdot)$ that gives a numerical score to a given sentence $\w$ of its "degree of grammaticality". That is, the higher the score $P(\w)$ the more grammatical it is. Thus, given two sentences $\w_1$ and $\w_2$, we say that $\w_1$ is more grammatical than $\w_2$ if and only if 
+
+\begin{equation}
+P(\w_1) > P(\w_2).
+(\#eq:scorer)
+\end{equation}
+
+If we stipulate some further conditions that $P$ is a probability function, that is,
+
+> (1) $P(\w) \geq 0$ for all $\w$ and
+>
+> (2) $\ds\int P(\w)\dd \w = 1$
+
+then we call $P$ a _language model_. The question now is how do we construct $P$.
+
+
+# $N$-gram Language Model
+
+Since the function $P$ in a language model is defined as a probability function, sentences $\w$ are treated as random vectors. Thus, using the product rule of probabilities
+
+\begin{align*}
+P(\w) &= P(w_1,w_2,\ldots,w_n) \\
+      &= P(w_1)P(w_2|w_1)P(w_3|w_1,w_2)\cdots P(w_n|w_1,w_2,\ldots,w_{n-1}).
+\end{align*}
+
+If we let $\w_{1:k} := (w_1,\ldots,w_k)$, then we can write more compactly the above product as
+
+\begin{equation}
+P(\w) = \prod_{k=1}^n P(w_k | \w_{1:{k-1}})
+(\#eq:full-model)
+\end{equation}
+
+where $(w_r | \w_{u:v}) = w_r$ if $u>v$.
+
+<!-- \vspace{12pt} -->
+
+```{r echo=FALSE, fig.align='center', out.width='85%', fig.cap='Probabilistic graphical presentation of $P(\\w)$ for $n=2,3,4,5$ number of tokens.'}
+knitr::include_graphics("img/ngram-pgm.pdf")
+```
+
+The question of interest now is "_How do we estimate the probabilities?_". The simplest way to do this is to resort to _counts_. Let's first add some additional notations in our arsenal.
+
+| **Notation** | **Description**       |
+|:------------:|:----------------------|
+| $C(w_a)$ | number of times the token $w_a$ occurs in the corpus |
+| $C(w_aw_b)$ | number of times the sequence of tokens $w_aw_b$ occurs in the corpus |
+| $C(\w_{1:k})$ | number of times the sequence of tokens $w_{1:k}$ occurs in the corpus |
+
+::: {.example}
+
+Consider the brown corpus data set available for download in Kaggle [@brown_kaggle_2018]. The full code is presented in [Appendix A](#appendix-a).
+
+```{r echo=FALSE}
+suppressWarnings(
+  suppressMessages(
+    library(tidyverse)
+    )
+  )
+
+tokens_dt <- dtplyr::lazy_dt(
+  read.csv(
+    file = "data/brown-corpus/brown.csv", 
+    header = TRUE
+    )
+  ) %>% 
+  select(tokenized_text, label) %>% 
+  mutate(id = seq_along(label)) %>% 
+  mutate(
+    token = str_c("<s> ", tokenized_text, " </s>") %>% 
+           str_replace("[ [:punct:]]+ </s>$", " </s>") %>% 
+           str_to_lower %>% 
+           str_split("\\s+")
+    )  %>% 
+  select(id, label, token) %>% 
+  as_tibble %>% 
+  unnest(token) %>% 
+  dtplyr::lazy_dt(.)
+```
+
+```{r}
+tokens_dt
+```
+
+Now let us consider counting the token $w=(\texttt{in})$.
+
+```{r}
+tokens_dt %>% 
+  filter(token == "in") %>% 
+  count(token) %>% 
+  as_tibble
+```
+
+Thus, $C(\texttt{in}) = `r format(as_tibble(count(tokens_dt, token=='in'))$n[2], big.mark=',')`$.
+
+Now let us try to count the token sequence $\w = (\tc{in}, \tc{the})$.
+
+```{r}
+tokens_dt %>% 
+  mutate(token2 = lead(token, default = "")) %>% 
+  filter(token == "in" & token2 == "the") %>% 
+  count(token, token2) %>% 
+  as_tibble -> count_in_the
+
+count_in_the
+```
+Thus, $C(\texttt{in}) = `r format(count_in_the$n, big.mark=',')`$.
+
+One can verify using similar code the following counts:
+
+```{r, echo=FALSE}
+count_bigram <- function(x,y) {
+tokens_dt %>% 
+  mutate(token2 = lead(token, default = "")) %>% 
+  filter(token == x & token2 == y) %>% 
+  count(token, token2) %>% 
+  as_tibble %>% 
+    {
+      if (nrow(.)>0) format(pull(.,n), big.mark=',')
+      else 0
+    }
+}
+```
+
+
+> $C(\tc{of},\tc{the}) = `r count_bigram('of','the')`$
+>
+> $C(\tc{to},\tc{the}) = `r count_bigram('to','the')`$
+>
+> $C(\tc{to},\tc{be})=	`r count_bigram('to','be')`$
+
+:::
+
+
+With this $C$-notation we can estimate^[See SNLP p.33.] the probabilities as
+
+\begin{equation}
+ P(w_k | \w_{1:(k-1)}) 
+ = \frac{P(w_k, \w_{1:(k-1)})} {P(\w_{1:(k-1)})}
+ = \frac{P(\w_{1:k})} {P(\w_{1:(k-1)})}
+ = \frac{C(\w_{1:k})} {C(\w_{1:(k-1)})}
+(\#eq:mle-ngram)
+\end{equation}
+
+However, it would be impractical to apply this formula because almost any long stretch of token sequence rarely occur in a given corpus, i.e., it would result to zero counts. For example, from the given brown corpus above, one can show (See [Appendix B](#appendix-b)) the following count:
+
+$$
+C(\tc{in},\tc{the},\tc{garden},\tc{just},\tc{outside},\tc{city}) = 0
+$$
+
+With this practical restriction, instead of computing probabilities from past $(n-1)$ token sequences we simply approximate it with the $N$ token neighbors to the left, i.e.,
+
+$$
+ P(w_n | \w_{1:(n-1)}) \approx P(w_n|\w_{(n-N+1):(n-1)}).
+$$
+This simplifies the model given by Eq \@ref(eq:full-model) into
+
+\begin{equation}
+ P(\w) = \prod_{k=1}^n P(w_k | \w_{(k-N+1):(k-1)})
+ (\#eq:ngram-model)
+\end{equation}
+
+where $(w_r | \w_{u:v}) = w_r$ if $u>v$.
+
+Equation \@ref(eq:ngram-model) is called the _$N$-gram model_.
+
+
+```{r echo=FALSE, fig.align='center', out.width='100%', fig.cap='Probabilistic graphical presentation of an $N$-gram model with $n=5$ tokens and for $N=1,2,3,4,5$.'}
+knitr::include_graphics("img/ngram-pgm-2.pdf")
+```
+
+- When $N=1$, we have a _unigram_ and Eq. \@ref(eq:ngram-model) simplifies to
+  
+  \begin{equation}
+   P(\w) = \prod_{k=1}^n P(w_k) 
+   (\#eq:unigram)
+  \end{equation}
+  noting that $P(w_k | \w_{k:(k-1)}) = P(w_k)$.
+
+- When $N=2$, we have a _bigram_ and Eq. \@ref(eq:ngram-model) simplifies to
+  
+  \begin{equation}
+   P(\w) = \prod_{k=1}^n P(w_k|w_{k-1}) 
+   (\#eq:bigram)
+  \end{equation}
+  noting that $P(w_k | \w_{(k-1):(k-1)}) = P(w_k|w_{k-1})$.
+
+- When $N=3$, we have a _trigram_ and Eq. \@ref(eq:ngram-model) simplifies to
+  
+  \begin{equation}
+   P(\w) = \prod_{k=1}^n P(w_k|w_{k-2}w_{k-1}) 
+   (\#eq:trigram)
+  \end{equation}
+  noting that $P(w_k | \w_{(k-2):(k-1)}) = P(w_k|w_{k-2}w_{k-1})$.
+  
+We can now simplify the probability provided in Eq. \@ref(eq:mle-ngram):
+
+- When $N=1$, 
+  
+  \begin{equation}
+    P(w_k) = \frac{C(w_k)}{\sum_{k=1}^n C(w_k)}
+   (\#eq:mle-unigram)
+  \end{equation}
+
+- When $N=2$, 
+  
+  \begin{equation}
+   P(w_k|w_{k-1}) = \frac{C(w_{k-1}w_k)}{C(w_{k-1})}
+   (\#eq:mle-bigram)
+  \end{equation}
+
+- When $N=3$, 
+  
+  \begin{equation}
+   P(w_k|w_{k-2}w_{k-1})  = \frac{C(w_{k-2}w_{k-1}w_k)}{C(w_{k-2}w_{k-1})}
+   (\#eq:mle-trigram)
+  \end{equation}
+ 
+ 
+::: {.example name="Brown Corpus Unigram"}
+Let us construct a unigram model from Brown corpus `tokens_dt`. 
+
+```{r}
+tokens_dt %>% 
+  count(token) %>% 
+  arrange(desc(n)) %>% 
+  ungroup %>% 
+  mutate(unigram_prob = n/sum(n)) %>% 
+  rename(unigram = token) -> unigram_dt 
+
+unigram_dt %>% 
+  as_tibble
+```
+:::
+
+::: {.example name="Brown Corpus Bigram"}
+Let us construct a bigram model from Brown corpus `tokens_dt`. 
+
+
+```{r cache=TRUE}
+tokens_dt %>% 
+  mutate(w2 = lead(token, default = "")) %>% 
+  filter(token!="</s>" & w2!="<s>") %>% 
+  count(token, w2) %>% 
+  arrange(desc(n)) %>% 
+  ungroup %>% 
+  group_by(token) %>% 
+  mutate(bigram_prob = n/sum(n)) %>% 
+  ungroup %>% 
+  mutate(bigram = str_c(token,"_",w2)) %>% 
+  select(bigram,n,bigram_prob) -> bigram_dt 
+
+bigram_dt %>%
+  as_tibble
+```
+:::
+
+::: {.example name="Brown Corpus Trigram"}
+Let us construct a trigram model from Brown corpus `tokens_dt`. 
+
+```{r trigram_dt, cache=TRUE}
+tokens_dt %>% 
+  mutate(w2 = lead(token, default = "")) %>% 
+  mutate(w3 = lead(w2, default = "")) %>% 
+  filter((token!="</s>" & w2!="<s>") & (w2!="</s>" & w3!="<s>")) %>% 
+  count(token, w2, w3)  %>% 
+  arrange(desc(n)) %>%
+  ungroup %>% 
+  group_by(token, w2) %>% 
+  mutate(trigram_prob = n/sum(n)) %>% 
+  ungroup %>% 
+  mutate(trigram = str_c(token,"_",w2,"_",w3)) %>% 
+  select(trigram,n,trigram_prob) -> trigram_dt 
+
+trigram_dt %>% 
+  as_tibble
+```
+:::
+
+::: {.example name="Sentence Probability"}
+Under unigram, bigram and trigram models, compute the probability of the sentence
+
+> `<s> I want to eat food </s>`
+
+Note first that we need to normalize the sentence, e.g., convert all to lowercase letters. Thus, we have $\w = (\tc{<s>},\tc{i},\tc{want},\tc{to},\tc{eat},\tc{food},\tc{</s>})$.
+
+- Under the unigram model:
+
+  $$
+  P(\w) = \prod_{k=1}^{6}P(w_k) = 
+  P(\tc{<s>})
+  P(\tc{i})
+  P(\tc{want})
+  P(\tc{to})
+  P(\tc{eat})
+  P(\tc{food})
+  P(\tc{</s>}).
+  $$
+  ```{r pu_sen}
+  sen <- "<s> I want to eat food </s>" %>% 
+    str_split("\\s+") %>% 
+    unlist %>% 
+    str_to_lower(.)
+    
+  unigram_dt %>%
+    filter(unigram %in% sen) %>% 
+    as_tibble -> pu_sen
+  
+  pu_sen
+  ```
+  Thus, 
+  $$
+  \begin{aligned}
+  P(&\tc{<s> I want to eat food </s>}) \\
+  &= 
+  P(\tc{<s>})
+  P(\tc{i})
+  P(\tc{want})
+  P(\tc{to})
+  P(\tc{eat})
+  P(\tc{food})
+  P(\tc{</s>}) \\
+  &=
+  `r format(round(pu_sen$unigram_prob[c(2,4,5,3,7,6,1)],4),scientific=FALSE) %>% str_c('(',.,')',collapse='')` \\
+  &= `r prod(pu_sen$unigram_prob[c(2,4,5,3,7,6,1)]) -> punigram; punigram` \\
+  &\approx 0
+  \end{aligned}
+  $$
+  
+  The last expression just shows that under the unigram model, finding the sentence `<s> I want to eat food </s>` from this corpus is almost impossible.
+  
+- Using the bigram model:
+```{r echo=FALSE, cache=TRUE}
+(unigram_dt %>% filter(unigram == '<s>') %>% pull(unigram_prob))*(bigram_dt %>% 
+    filter(bigram %in% c("<s>_i","i_want","want_to",
+                         "to_eat","eat_food","food_</s>")) %>% pull(bigram_prob) %>% prod) -> pbigram
+```
+  $$
+  \begin{aligned}
+  P(\w) &= \prod_{k=1}^{6}P(w_k|w_{k-1}) \\
+  &= 
+  P(\tc{<s>})
+  P(\tc{i}|\tc{<s>})
+  P(\tc{want}|\tc{i})
+  P(\tc{to}|\tc{want}) \\
+  &\quad\quad 
+  P(\tc{eat}|\tc{to})
+  P(\tc{food}|\tc{eat})
+  P(\tc{</s>}|\tc{food}) \\
+  &=
+  \frac{C(\tc{<s>})}{N_T}\cdot
+  \frac{C(\tc{<s>},\tc{i})}{C(\tc{<s>})}\cdot
+  \frac{C(\tc{i},\tc{want})}{C(\tc{i})}\cdot
+  \frac{C(\tc{want},\tc{to})}{C(\tc{want})} \\
+  &\quad\quad 
+  \frac{C(\tc{to},\tc{eat})}{C(\tc{to})}\cdot
+  \frac{C(\tc{eat},\tc{food})}{C(\tc{eat})}\cdot
+  \frac{C(\tc{food},\tc{</s>})}{C(\tc{food})} \\
+  &=
+  (`r unigram_dt %>% filter(unigram == '<s>') %>% pull(unigram_prob)`)
+   `r (bigram_dt %>% 
+   filter(bigram %in% c("<s>_i","i_want")) %>% 
+   pull(bigram_prob) 
+   %>% str_c('(',.,')',collapse=''))`\\
+  &\qquad 
+   `r (bigram_dt %>% 
+   filter(bigram %in% c("want_to","to_eat","eat_food","food_</s>")) %>% 
+   pull(bigram_prob) 
+   %>% str_c('(',.,')',collapse=''))`\\
+  &=
+  `r pbigram`
+  \end{aligned}
+  $$
+  where $P(\tc{<s>})$ is computed as follows
+  ```{r ps-compute}
+  unigram_dt %>% 
+    filter(unigram == "<s>") %>% 
+    as_tibble
+  ```
+  while $P(w_k |w_{k-1})$ are computed as follows.
+  ```{r}
+  bigram_dt %>% 
+    filter(bigram %in% c("<s>_i","i_want","want_to",
+                         "to_eat","eat_food","food_</s>")) %>% 
+    as_tibble
+  ```
+  Observe that the probability (`r pbigram`) under the bigram model is quite higher by a factor of `r pbigram/punigram` compared to that computed under the unigram.
+  
+- Using the trigram model:
+
+  $$
+  \begin{aligned}
+  P(\w) &= \prod_{k=1}^{6}P(w_k|w_{k-1}) \\
+  &= 
+  P(\tc{<s>})
+  P(\tc{i}|\tc{<s>})
+  P(\tc{want}|\tc{<s>},\tc{i})
+  P(\tc{to}|\tc{i},\tc{want}) \\
+  &\quad\quad 
+  P(\tc{eat}|\tc{want},\tc{to})
+  P(\tc{food}|\tc{to},\tc{eat})
+  P(\tc{</s>}|\tc{eat},\tc{food}).
+  \end{aligned}
+  $$
+  However, there's a problem. We don't have counts for the trigrams `want_to_eat`, `to_eat_food`, and `eat_food_</s>`.  As shown by the following code:
+
+  ```{r}
+  trigram_dt %>% 
+    filter(trigram %in% c("want_to_eat",
+                          "to_eat_food",
+                          "eat_food_</s>")) %>% 
+    as_tibble
+  ```
+  This is a typical example of the practical restrictions that the longer the token sequence that rare it is to find the corpus. 
+  Computing probabilities is such cases will be answered in the lesson about _smoothing_.
+:::
+
+```{r echo=FALSE, eval=FALSE}
+c(5, 827, 9, 2) %>% 
+c(2,608,1,6,6,5,1)
+c(2,4,686, 2, 6, 211)
+```
+
+
+::: {.example}
+Suppose we want to know what is the most likely next word of the token sequence
+$$
+ \tc{on}\quad \tc{the}\quad \underline{\phantom{aa}?\phantom{aa}}
+$$
+This problem is equivalent to finding $w^*$ where
+$$
+w^* = \underset{w}{\arg\max}\ P(w|\tc{on},\tc{the})
+$$
+Using the estimates for the trigram:
+
+$$
+w^* 
+= \underset{w}{\arg\max}\ \frac{C(\tc{on},\, \tc{the},\, w)}{C(\tc{on},\, \tc{the})}
+= \underset{w}{\arg\max}\ C(\tc{on},\, \tc{the},\, w)
+$$
+where the second equality follows since the denominator does not depend on $w$.
+
+Implementing the counting R, we have 
+
+```{r}
+trigram_dt %>% 
+  filter(str_detect(trigram, "^on_the_")) %>% 
+  arrange(desc(trigram_prob)) -> prob_on_the
+
+prob_on_the %>% 
+  as_tibble
+```
+
+
+From the results above, we find that the most likely word that follows is $w^* = \tc{other}$ with $C(\tc{on},\, \tc{the},\, w^*) = `r as_tibble(prob_on_the)$n[1]`$ or, in terms of probability, $$P(w^*|\tc{on},\tc{the}) =  `r as_tibble(prob_on_the)$trigram_prob[1]`.$$
+
+:::
+
+# Generating Random Sentences
+
+With the given $N$-gram model $P$, we can generate, i.e. sample, sequence of tokens $\w$.
+
+
+## Unigram Sentence Generation
+
+For unigram models, we use the following algorithm to generate a sentence:
+
+ 1. Set $w_1 = \tc{<s>}$.
+ 2. Generate $U \sim \textsf{Unif}(0,1)$.
+ 3. If $\sum_{k=1}^{i-1} P(w_k) < U \leq \sum_{k=1}^{i} P(w_k)$, then set $w = w_i$ as the next token in the sequence.
+ 4. While $w_i \neq \tc{</s>}$, repeat steps 2 and 3.
+ 
+Let us now try illustrating this algorithm using the unigram model obtained from the Brown Corpus above. Since a assign $w_1 =\tc{<s>}$ with probability 1, we need calibrate the probabilites as follows
+```{r}
+unigram_dt %>% 
+  filter(unigram!="<s>") %>% 
+  mutate(unigram_prob = n/sum(n)) -> n_unigram_dt
+
+n_unigram_dt %>% 
+  as_tibble
+```
+
+Next, we need to form new columns for $\sum_{k=1}^{i-1} P(w_k)$ and $\sum_{k=1}^{i} P(w_k)$. 
+
+```{r}
+n_unigram_dt %>% 
+  filter(unigram != "<s>") %>% 
+  mutate(P = cumsum(unigram_prob)) %>%
+  mutate(LP = lag(P, default = 0)) -> Punigram
+```
+
+We now initialize our sentence vector with $w_1 = \tc{<s>}$ and start the loop as stated in Steps 2 to 4:
+
+```{r unigram-gen, cache=TRUE}
+set.seed(11)
+sen_gen <- "<s>"
+repeat {
+  U <- runif(1)
+  Punigram %>% 
+    filter(LP < U & U <= P) %>% 
+    pull(unigram) -> w
+  if (w != "</s>"){
+    sen_gen <- str_c(sen_gen," ",w)
+    print(sen_gen)
+  } else {
+    sen_gen <- str_c(sen_gen," ",w)
+    break
+  }
+}
+sen_gen
+```
+
+## Bigram Sentence Generation
+
+```{r Pbigram, cache=TRUE}
+bigram_dt %>% 
+  separate(bigram,c("w1","w2"), sep="_", remove = FALSE) %>% 
+  group_by(w1) %>% 
+  arrange(desc(w1)) %>%
+  mutate(P = cumsum(bigram_prob)) %>% 
+  mutate(LP= lag(P, default = 0)) %>% 
+  ungroup -> Pbigram
+
+Pbigram %>% 
+  as_tibble
+```
+
+
+```{r bigram-gen, cache=TRUE}
+set.seed(18)
+w <- sen_gen <- "<s>"
+repeat {
+  U <- runif(1)
+  Pbigram %>% 
+    filter(w1==w & LP < U & U <= P) %>% 
+    pull(bigram) %>% 
+    str_split("_") %>% 
+    unlist -> wb
+  
+  sen_gen <- str_c(c(sen_gen, wb[2]), collapse = " ")
+  print(sen_gen)
+  w <- wb[2]
+  if (w == "</s>"){
+    break
+  } 
+}
+```
+
+
+\newpage
+
+# Appendix A {- #appendix-a}
+
+The following is the R code deriving the `tokens_dt` data table.
+
+```{r eval=FALSE}
+suppressWarnings(
+  suppressMessages(
+    library(tidyverse)
+    )
+  )
+
+tokens_dt <- dtplyr::lazy_dt(
+  read.csv(
+    file = "data/brown-corpus/brown.csv", 
+    header = TRUE
+    )
+  ) %>% 
+  select(tokenized_text, label) %>% 
+  mutate(id = seq_along(label)) %>% 
+  mutate(
+    token = str_c("<s> ", tokenized_text, " </s>") %>% 
+           str_replace("[ [:punct:]]+ </s>$", " </s>") %>% 
+           str_to_lower %>% 
+           str_split("\\s+")
+    )  %>% 
+  select(id, label, token) %>% 
+  as_tibble %>% 
+  unnest(token) %>% 
+  dtplyr::lazy_dt(.)
+```
+
+
+
+
+# Appendix B {- #appendix-b}
+
+The following code computes the count:
+
+$$
+C(\tc{in},\tc{the},\tc{garden},\tc{just},\tc{outside},\tc{city}) = 0
+$$
+
+
+```{r eval=FALSE}
+tokens_dt %>% 
+  mutate(token2 = lead(token, default = "")) %>% 
+  mutate(token3 = lead(token2, default = "")) %>% 
+  mutate(token4 = lead(token3, default = "")) %>% 
+  mutate(token5 = lead(token4, default = "")) %>% 
+  mutate(token6 = lead(token5, default = "")) %>% 
+  
+  filter(
+    token == "in"   & 
+    token2 == "the" &
+    token3 == "garden" &
+    token4 == "just" &
+    token5 == "outside" &
+    token6 == "city" 
+    ) %>% 
+  count(token, 
+        token2,
+        token3,
+        token4,
+        token5,
+        token6
+        ) %>%
+  as_tibble
+```
+
+
+
+
+# References
+
