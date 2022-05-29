@@ -599,7 +599,7 @@ For unigram models, we use the following algorithm to generate a sentence:
  3. If $\sum_{k=1}^{i-1} P(w_k) < U \leq \sum_{k=1}^{i} P(w_k)$, then set $w = w_i$ as the next token in the sequence.
  4. While $w_i \neq \tc{</s>}$, repeat steps 2 and 3.
  
-Let us now try illustrating this algorithm using the unigram model obtained from the Brown Corpus above. Since a assign $w_1 =\tc{<s>}$ with probability 1, we need calibrate the probabilites as follows
+Let us now try illustrating this algorithm using the unigram model obtained from the Brown Corpus above. Since we assign $w_1 =\tc{<s>}$ with probability 1, we need to calibrate the probabilites as follows
 ```{r}
 unigram_dt %>% 
   filter(unigram!="<s>") %>% 
