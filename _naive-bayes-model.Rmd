@@ -1,0 +1,44 @@
+---
+title: "Smoothing"
+subtitle: _(Part 2 of Modelling Textual Data Series)_
+author: 
+  - Rey R. Cuenca^[Department of Mathematics and Statistics, MSU-Iligan Institute of Technology]
+date: "May 2022"
+abstract: |
+  This paper gives a quick introduction to the naive bayes model as model for Part-of-Speech Tagging.
+output:
+  bookdown::pdf_document2:
+    template: pandoc/rvc-template.tex
+    extra_dependencies: ["float"]
+geometry:
+  - margin=1.25in
+fontsize: 12pt
+header-includes:
+  - \usepackage{tgpagella}
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup{width=0.85\linewidth, font=footnotesize, labelfont=bf}
+  - \newcommand{\w}{\mathbf{w}}
+  - \newcommand{\dd}{\text{d}}
+  - \newcommand{\tc}[1]{\texttt{#1}}
+  - \newcommand{\ds}{\displaystyle}
+toc: false
+indent: false
+classoption:
+  a4paper
+bibliography: references.bib
+csl: apa-5th-edition.csl
+link-citations: yes
+linkcolor: blue
+citecolor: blue
+urlcolor: blue
+---
+```{r echo=FALSE}
+knitr::opts_chunk$set(comment = "#>")
+```
+
+
+# 
+
+
+# References

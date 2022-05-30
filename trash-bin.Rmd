@@ -1,0 +1,135 @@
+<!-- Moreover, the same table shows the counts per token: -->
+  <!-- ```{r echo=FALSE} -->
+  <!-- unigram_dt %>% sum->N -->
+  <!-- ``` -->
+  
+  <!-- \begin{tabbing} -->
+  <!-- \hspace{1.5in}\=\hspace{0.5in}\=\kill -->
+    
+    <!--  $C(\tc{i}) = `r unigram_dt$i`$ \> $\implies$ \> $p_1 = P(\tc{i}) = `r unigram_dt$i`/N = `r unigram_dt$i/N`$ \\ -->
+      <!--  $C(\tc{want}) = `r unigram_dt$want`$ \> $\implies$ \> $p_2 = P(\tc{want}) = `r unigram_dt$want`/N = `r unigram_dt$want/N`$ \\ -->
+        <!--  $C(\tc{to}) = `r unigram_dt$to`$ \> $\implies$ \> $p_3 = P(\tc{to}) = `r unigram_dt$to`/N = `r unigram_dt$to/N`$ \\ -->
+          <!--  $C(\tc{eat}) = `r unigram_dt$eat`$ \> $\implies$ \> $p_4 = P(\tc{eat}) = `r unigram_dt$eat`/N = `r unigram_dt$i/N`$ \\ -->
+            <!--  $C(\tc{chinese}) = `r unigram_dt$chinese`$ \> $\implies$ \> $p_5 = P(\tc{chinese}) = `r unigram_dt$chinese`/N = `r unigram_dt$chinese/N`$ \\ -->
+              <!--  $C(\tc{food}) = `r unigram_dt$food`$ \> $\implies$ \> $p_6 = P(\tc{food}) = `r unigram_dt$food`/N = `r unigram_dt$food/N`$ \\ -->
+                <!--  $C(\tc{lunch}) = `r unigram_dt$lunch`$ \> $\implies$ \> $p_7= P(\tc{lunch}) = `r unigram_dt$lunch`/N = `r unigram_dt$lunch/N`$ \\ -->
+                  <!--  $C(\tc{spend}) = `r unigram_dt$spend`$ \> $\implies$ \> $p_8 = P(\tc{spend}) = `r unigram_dt$spend`/N = `r unigram_dt$spend/N`$ \\[5pt] -->
+                    <!--  Total ($N$) = `r N` -->
+                      
+                      <!-- \end{tabbing} -->
+                      
+                      <!-- Let $\x_u$ and $\p_u$ be $8\times 1$ column vectors defined respectively as follows $$\x_u = \begin{bmatrix}`r unigram_dt %>% names %>% str_c('C(\\tc{',.,'})',collapse=',')`\end{bmatrix}^\top$$ and $$\p_u = \begin{bmatrix}p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8\end{bmatrix}^\top.$$ -->
+                        <!-- Clearly, with $\mb{1} = (1,1,1,1,1,1,1,1)^\top$, we have -->
+                          <!-- $$ -->
+                          <!-- \p_U = \frac{\x_u}{\mb{1}^\top \x_u}. -->
+                            <!-- $$ -->
+                            <!-- We can easily verify this using R, by first noting that $\mb{1}^\top \x_u = \sum_{w\in\V} C(w)$,  -->
+                              
+                              <!-- ```{r} -->
+                              <!-- xu <- c(2533, 927, 2417, 746, 158, 1093, 341, 278) -->
+                                <!-- xu/sum(xu) -->
+                                <!-- ``` -->
+                                
+                                <!-- One can see that each of these values matches the probabilities $p_i$'s computed above. -->
+
+<!-- On the other hand, Table \@ref(tab:berkeley-bigram) can be converted as a matrix $\mb{W} = (W_{ij})$ such that $$W_{ij} = C(w_i,w_j)$$ with $w_i,w_j \in \V$, $i,j=1,2,\ldots,8$. For example, $$C(\tc{i},\tc{want}) = C(w_1,w_2) = W_{12} = 827.$$ -->
+
+<!-- Now, let $\mb{P}_b = (P_{ij})$ be the $8\times 8$ matrix such that  -->
+<!-- $$P_{ij} = P(w_j|w_i)$$ -->
+<!-- i.e., $\mb{P}_b$ is the matrix of bigram probabilities. It can be shown (see full proof in [Appendix A](#appendix-a)) that with Hadamard division $\oslash$ and Kronecker product $\otimes$  -->
+<!-- $$ -->
+<!-- \mb{P}_b = \mb{W} \oslash \left( \mb{1} \otimes \x_u^\top\right),  -->
+<!-- $$ -->
+<!-- The above equality simply means that we divide the transpose of $\x_u$ row-element-wise to $\mb{W}$. This gives us the $(i,j)$-th element of the matrix $\mb{P}_u$, $$P(w_j|w_i) = C(w_i,w_j)/C(w_i).$$ -->
+
+<!-- Thus, to apply a Laplace smoothing,  we add 1 to each of the element of $\mb{W}$ -->
+
+
+<!-- \newpage -->
+
+<!-- # Appendix A -->
+
+<!-- ::: {.proof} -->
+<!-- To show -->
+<!-- $$ -->
+<!-- \mb{P}_b = \mb{W} \oslash \left( \mb{1} \otimes \x_u^\top\right)  -->
+<!-- $$ -->
+<!-- let us first denote $w_1 = \tc{i}$, $w_2 = \tc{want}$, $w_3 = \tc{to}$, $w_4 = \tc{eat}$, $w_5 = \tc{chinese}$, $w_6 = \tc{food}$, $w_7 = \tc{lunch}$, and $w_8 = \tc{spend}$ to simplify things up. Now by Kronecker product, -->
+<!-- $$ -->
+<!-- \begin{aligned} -->
+<!-- \mb{1} \otimes \x_u^\top  -->
+<!-- &= \begin{bmatrix} -->
+<!-- 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top \\ 1 \x_u^\top  -->
+<!-- \end{bmatrix}  -->
+<!-- =  -->
+<!-- \begin{bmatrix} -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)   \\ -->
+<!-- C(w_1) & C(w_2) & C(w_3) & C(w_4) & C(w_5) & C(w_6) & C(w_7) & C(w_8)    -->
+<!-- \end{bmatrix} -->
+<!-- \end{aligned} -->
+<!-- $$ -->
+<!-- Since $\mb{W} = (W_{ij}) = (C(w_i,w_j))$, it follows by Hadamard division that -->
+<!-- $$ -->
+<!-- \begin{aligned} -->
+<!-- \mb{W}& \oslash \left( \mb{1} \otimes \x_u^\top\right)  \\ -->
+<!-- &= -->
+<!-- \begin{bmatrix} -->
+<!-- \frac{C(w_1,w_1)}{C(w_1)} & \frac{C(w_1,w_2)}{C(w_1)} & \frac{C(w_1,w_3)}{C(w_1)} & \frac{C(w_1,w_4)}{C(w_1)} & \frac{C(w_1,w_5)}{C(w_1)} & \frac{C(w_1,w_6)}{C(w_1)} & \frac{C(w_1,w_7)}{C(w_1)} & \frac{C(w_1,w_8)}{C(w_1)} \\  -->
+<!-- \frac{C(w_2,w_1)}{C(w_2)} & \frac{C(w_2,w_2)}{C(w_2)} & \frac{C(w_2,w_3)}{C(w_2)} & \frac{C(w_2,w_4)}{C(w_2)} & \frac{C(w_2,w_5)}{C(w_2)} & \frac{C(w_2,w_6)}{C(w_2)} & \frac{C(w_2,w_7)}{C(w_2)} & \frac{C(w_2,w_8)}{C(w_2)} \\  -->
+<!-- \frac{C(w_3,w_1)}{C(w_3)} & \frac{C(w_3,w_2)}{C(w_3)} & \frac{C(w_3,w_3)}{C(w_3)} & \frac{C(w_3,w_4)}{C(w_3)} & \frac{C(w_3,w_5)}{C(w_3)} & \frac{C(w_3,w_6)}{C(w_3)} & \frac{C(w_3,w_7)}{C(w_3)} & \frac{C(w_3,w_8)}{C(w_3)} \\  -->
+<!-- \frac{C(w_4,w_1)}{C(w_4)} & \frac{C(w_4,w_2)}{C(w_4)} & \frac{C(w_4,w_3)}{C(w_4)} & \frac{C(w_4,w_4)}{C(w_4)} & \frac{C(w_4,w_5)}{C(w_4)} & \frac{C(w_4,w_6)}{C(w_4)} & \frac{C(w_4,w_7)}{C(w_4)} & \frac{C(w_4,w_8)}{C(w_4)} \\  -->
+<!-- \frac{C(w_5,w_1)}{C(w_5)} & \frac{C(w_5,w_2)}{C(w_5)} & \frac{C(w_5,w_3)}{C(w_5)} & \frac{C(w_5,w_4)}{C(w_5)} & \frac{C(w_5,w_5)}{C(w_5)} & \frac{C(w_5,w_6)}{C(w_5)} & \frac{C(w_5,w_7)}{C(w_5)} & \frac{C(w_5,w_8)}{C(w_5)} \\  -->
+<!-- \frac{C(w_6,w_1)}{C(w_6)} & \frac{C(w_6,w_2)}{C(w_6)} & \frac{C(w_6,w_3)}{C(w_6)} & \frac{C(w_6,w_4)}{C(w_6)} & \frac{C(w_6,w_5)}{C(w_6)} & \frac{C(w_6,w_6)}{C(w_6)} & \frac{C(w_6,w_7)}{C(w_6)} & \frac{C(w_6,w_8)}{C(w_6)} \\  -->
+<!-- \frac{C(w_7,w_1)}{C(w_7)} & \frac{C(w_7,w_2)}{C(w_7)} & \frac{C(w_7,w_3)}{C(w_7)} & \frac{C(w_7,w_4)}{C(w_7)} & \frac{C(w_7,w_5)}{C(w_7)} & \frac{C(w_7,w_6)}{C(w_7)} & \frac{C(w_7,w_7)}{C(w_7)} & \frac{C(w_7,w_8)}{C(w_7)} \\  -->
+<!-- \frac{C(w_8,w_1)}{C(w_8)} & \frac{C(w_8,w_2)}{C(w_8)} & \frac{C(w_8,w_3)}{C(w_8)} & \frac{C(w_8,w_4)}{C(w_8)} & \frac{C(w_8,w_5)}{C(w_8)} & \frac{C(w_8,w_6)}{C(w_8)} & \frac{C(w_8,w_7)}{C(w_8)} & \frac{C(w_8,w_8)}{C(w_8)} -->
+<!-- \end{bmatrix} -->
+<!-- \end{aligned} -->
+<!-- $$ -->
+<!-- However, note that $P(w_j|w_i) = C(w_i,w_j)/C(w_i)$. It follows that  -->
+<!-- $$ -->
+<!-- \mb{W} \oslash \left( \mb{1} \otimes \x_u^\top\right) = (P(w_j|w_i)) = \mb{P}_b -->
+<!-- $$ -->
+<!-- ::: -->
+
+<!-- ```{r echo=FALSE, eval=FALSE} -->
+<!-- outer(1:8,1:8, FUN = function(x,y) { -->
+<!--   str_c("\\frac{C(w_",x,",w_",y,")}{C(w_",x,")}") -->
+<!-- }) %>%  -->
+<!--   apply(1,function(x) str_c(x, collapse = " & ")) %>%  -->
+<!--   str_c(collapse = " \\\\ \n\r") %>%  -->
+<!--   cat -->
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- fp <- function (x,y) { -->
+<!--   str_c("C(\\tc{",x,"},\\tc{",y,"})") -->
+<!-- } -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- unigram_dt %>%  -->
+<!--   names %>%  -->
+<!--   outer(.,., FUN = fp) %>%  -->
+<!--   c %>%  -->
+<!--   purrr::map2(.x = ., .y = {bigram_dt %>% "["(,-1) %>% as.matrix}, .f = ~str_c(.x, " = ", .y, collapse = "")) %>%  -->
+<!--   unlist %>%  -->
+<!--   matrix(ncol = 8) %>%  -->
+<!--   apply(1, FUN = function(x) {str_c(x, collapse = " & ")}) %>%  -->
+<!--   str_c(collapse = " \\\\  \n") %>%  -->
+<!--   str_c("\\begin{matrix} ",.," \\end{matrix}") %>%  -->
+<!--   cat -->
+<!-- ``` -->
+
